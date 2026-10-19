@@ -2,7 +2,6 @@ package cl.alex.ev2;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -16,11 +15,13 @@ import androidx.core.content.ContextCompat;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class RegistroActivity extends AppCompatActivity {
 
@@ -31,13 +32,17 @@ public class RegistroActivity extends AppCompatActivity {
     private Button btnGuardar, btnObtenerUbicacion;
 
     private FusedLocationProviderClient fusedLocationClient;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registro);
 
-        //  initializes
+        // Inicializar Firebase
+        db = FirebaseFirestore.getInstance();
+
+        // Inicializar el prov
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
 
         // Las referencias
@@ -50,7 +55,7 @@ public class RegistroActivity extends AppCompatActivity {
         btnGuardar = findViewById(R.id.btnGuardar);
         btnObtenerUbicacion = findViewById(R.id.btnObtenerUbicacion);
 
-        // Cargar Categoríass
+        // Cargar Categorías
         String[] categorias = {"Seleccione categoría", "A", "B", "C", "D", "E"};
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, categorias);
         spCategoria.setAdapter(adapter);
@@ -81,16 +86,13 @@ public class RegistroActivity extends AppCompatActivity {
             return;
         }
 
-        fusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
-            @Override
-            public void onSuccess(Location location) {
-                if (location != null) {
-                    etLatitud.setText(String.valueOf(location.getLatitude()));
-                    etLongitud.setText(String.valueOf(location.getLongitude()));
-                    Toast.makeText(RegistroActivity.this, "Ubicación obtenida con éxito", Toast.LENGTH_SHORT).show();
-                } else {
-                    Toast.makeText(RegistroActivity.this, "Active el GPS del dispositivo para obtener coordenadas", Toast.LENGTH_LONG).show();
-                }
+        fusedLocationClient.getLastLocation().addOnSuccessListener(this, location -> {
+            if (location != null) {
+                etLatitud.setText(String.valueOf(location.getLatitude()));
+                etLongitud.setText(String.valueOf(location.getLongitude()));
+                Toast.makeText(RegistroActivity.this, "Ubicación obtenida con éxito", Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(RegistroActivity.this, "Active el GPS del dispositivo para obtener coordenadas", Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -120,6 +122,27 @@ public class RegistroActivity extends AppCompatActivity {
             return;
         }
 
-        Toast.makeText(this, "Datos y ubicación validados correctamente", Toast.LENGTH_SHORT).show();
+        String categoria = spCategoria.getSelectedItem().toString();
+
+        btnGuardar.setEnabled(false);
+
+        Map<String, Object> incidencia = new HashMap<>();
+        incidencia.put("titulo", titulo);
+        incidencia.put("descripcion", descripcion);
+        incidencia.put("categoria", categoria);
+        incidencia.put("fechaHora", fechaHora);
+        incidencia.put("latitud", latitud);
+        incidencia.put("longitud", longitud);
+
+        db.collection("incidencias")
+                .add(incidencia)
+                .addOnSuccessListener(documentReference -> {
+                    Toast.makeText(RegistroActivity.this, "¡Incidencia guardada exitosamente!", Toast.LENGTH_LONG).show();
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    btnGuardar.setEnabled(true);
+                    Toast.makeText(RegistroActivity.this, "Error de red/servidor: " + e.getLocalizedMessage(), Toast.LENGTH_LONG).show();
+                });
     }
 }
