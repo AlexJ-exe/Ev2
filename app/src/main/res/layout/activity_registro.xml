@@ -57,6 +57,13 @@
             android:inputType="text"
             android:layout_marginBottom="12dp" />
 
+        <Button
+            android:id="@+id/btnObtenerUbicacion"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Obtener Ubicación (GPS)"
+            android:layout_marginBottom="12dp" />
+
         <EditText
             android:id="@+id/etLatitud"
             android:layout_width="match_parent"
